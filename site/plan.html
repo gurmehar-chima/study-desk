@@ -1,0 +1,239 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="description" content="A study planner that pulls class times and due dates from Canvas, Microsoft 365 and Google Classroom, builds a study plan for each class, and includes an AI study assistant.">
+<meta name="robots" content="noindex">
+<title>Study Desk</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,700&family=Instrument+Sans:wght@400;500;600&family=JetBrains+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="styles.css">
+<link rel="stylesheet" href="plan.css">
+</head>
+<body>
+<div class="wrap">
+  <header class="top">
+    <div class="brand">
+      <h1>Study Desk</h1>
+      <span class="sub" id="todayLine"></span>
+    </div>
+    <div class="actions">
+      <span class="sync" id="sync"></span>
+      <a class="btn jump" href="#studyPlan">Study plan</a>
+      <button class="btn" id="btnAdd">Add item</button>
+      <button class="btn primary" id="btnImport">Connect calendars</button>
+    </div>
+  </header>
+
+  <div class="banner" id="exBanner" hidden>
+    <span><strong>Example schedule.</strong> These classes and assignments are made up so you can see how it works. Connect your calendars or add your own items to replace them.</span>
+    <button id="btnClearEx">Start with an empty planner</button>
+  </div>
+
+  <div class="banner lock" id="lockBanner" hidden>
+    <span><strong>Your linked calendars are ready.</strong> Enter your passphrase once to unlock them in this browser. <span class="err" id="lockErr" hidden>That passphrase did not work.</span></span>
+    <form id="lockForm"><input type="password" id="lockPass" placeholder="Passphrase" aria-label="Passphrase" autocomplete="current-password"><button type="submit">Unlock</button></form>
+  </div>
+
+  <div class="grid">
+    <section class="panel day" aria-labelledby="dayTitle">
+      <div class="ph"><div><div class="eyebrow" id="dayEyebrow"></div><h2 id="dayTitle"></h2></div></div>
+      <div class="body" id="dayBody"></div>
+    </section>
+
+    <section class="panel cal" aria-labelledby="calTitle">
+      <div class="ph">
+        <h2 id="calTitle"></h2>
+        <div class="nav">
+          <button id="prevM" aria-label="Previous month">←</button>
+          <button id="todayM">Today</button>
+          <button id="nextM" aria-label="Next month">→</button>
+        </div>
+      </div>
+      <div class="dow" aria-hidden="true"><span>Sun</span><span>Mon</span><span>Tue</span><span>Wed</span><span>Thu</span><span>Fri</span><span>Sat</span></div>
+      <div class="month" id="month"></div>
+      <div class="legend" id="legend"></div>
+    </section>
+
+    <section class="panel assistant" aria-labelledby="asTitle">
+      <div class="ph"><div><div class="eyebrow">Assistant</div><h2 id="asTitle">Your day, briefly</h2></div><button class="btn small" id="btnAI">Settings</button></div>
+      <div class="brief" id="brief"></div>
+      <div class="setup" id="aiSetup" hidden>
+        <p>To ask questions, connect a free Ollama model or a Claude API key. Settings stay in this browser.</p>
+        <button class="btn primary" id="btnAIKey">Set up assistant</button>
+      </div>
+      <div class="chips" id="chips">
+        <button data-q="Make me a realistic hour-by-hour plan for the rest of today, built around my classes and what is due soonest.">Plan my day</button>
+        <button data-q="Looking at everything due in the next week, what should I start first and why?">What first?</button>
+        <button data-q="Take my biggest upcoming assignment and break it into small steps with time estimates, spread across the days I have left.">Break down a task</button>
+        <button data-q="Quiz me on the topic of my next due assignment. Ask one question at a time and wait for my answer.">Quiz me</button>
+      </div>
+      <div class="log" id="log" aria-live="polite"></div>
+      <form class="compose" id="compose">
+        <textarea id="q" rows="1" placeholder="Ask about a task or topic" aria-label="Message the assistant"></textarea>
+        <button class="btn primary" id="send" type="submit">Send</button>
+      </form>
+      <p class="fine">The assistant sees the schedule on this page. It coaches and explains; it will not write graded work for you. Answers come from the model you choose under Settings.</p>
+    </section>
+  </div>
+  <section class="panel planp" id="studyPlan" aria-labelledby="spTitle">
+    <div class="ph">
+      <div>
+        <div class="eyebrow">Study plan · next 7 days</div>
+        <h2 id="spTitle">Study sessions for each class</h2>
+        <p>Sessions are fitted into the free time around your classes. Upcoming deadlines get prep time first, spread over the days before they are due, and the rest of each class's weekly hours go to review and practice.</p>
+      </div>
+      <button class="btn" id="spAsk">Review this plan with the assistant</button>
+    </div>
+    <div class="sp-body">
+      <div class="sp-head"><div class="tally" id="spSummary"></div><span class="sp-note" id="spExample" hidden>Built from the example schedule. Connect your calendars to plan your real classes.</span></div>
+      <div class="sp-classes" id="spClasses"></div>
+      <div class="sp-settings">
+        <label>Study from<input type="time" id="spStart"></label>
+        <label>Until<input type="time" id="spEnd"></label>
+        <label>Max hours a day<input type="number" id="spMax" min="0.5" max="12" step="0.5"></label>
+        <label>Session length<select id="spBlock"><option value="25">25 min</option><option value="50">50 min</option><option value="90">90 min</option></select></label>
+        <label class="inline"><input type="checkbox" id="spWeekends">Study on weekends</label>
+      </div>
+      <div class="sp-filter" id="spFilter" role="group" aria-label="Show one class"></div>
+      <div class="sp-week" id="spWeek"></div>
+      <p class="sp-how">Hours a week start at about two hours of study per hour of class (less for Light, more for Heavy), and you can type your own. Exams get about 5 hours of prep over the 6 days before, papers and labs 3 hours, quizzes 1.5. Check off sessions as you finish them.</p>
+    </div>
+  </section>
+</div>
+
+<dialog id="dlgImport" aria-labelledby="impTitle">
+  <div class="dlg">
+    <h3 id="impTitle">Connect your calendars</h3>
+    <ul class="feeds" id="feedList"></ul>
+    <p class="note" id="linkNote"></p>
+
+    <h4>1. Copy your calendar link</h4>
+    <div class="tabs" role="tablist">
+      <button role="tab" id="tabCanvas" data-tab="Canvas" aria-selected="true">Canvas</button>
+      <button role="tab" id="tabMs" data-tab="Ms" aria-selected="false">Microsoft 365</button>
+      <button role="tab" id="tabClass" data-tab="Class" aria-selected="false">Google Classroom</button>
+    </div>
+    <ol class="steps" id="stepsCanvas">
+      <li>In Canvas, open <strong>Calendar</strong> from the left menu.</li>
+      <li>Click <strong>Calendar Feed</strong> at the bottom of the right sidebar.</li>
+      <li>Copy the link it shows. It ends in <code>.ics</code> and covers all your courses.</li>
+    </ol>
+    <ol class="steps" id="stepsMs" hidden>
+      <li>Open Outlook on the web and go to <strong>Settings → Calendar → Shared calendars</strong>.</li>
+      <li>Under <strong>Publish a calendar</strong>, pick your calendar, choose <strong>Can view all details</strong>, and click Publish.</li>
+      <li>Copy the <strong>ICS</strong> link. If Publish is missing, your school has turned it off; use the file import below.</li>
+    </ol>
+    <ol class="steps" id="stepsClass" hidden>
+      <li>Classroom puts each class's due dates on its own Google Calendar. Open <strong>calendar.google.com</strong> on a computer.</li>
+      <li>Hover the class calendar in the left list, open <strong>Settings and sharing</strong>, and scroll to <strong>Integrate calendar</strong>.</li>
+      <li>Copy the <strong>Secret address in iCal format</strong>. Repeat for each class. If it is hidden, your school has turned it off; use the file import below.</li>
+    </ol>
+
+    <h4>2. Save the links in your GitHub repository</h4>
+    <ol class="steps">
+      <li>In your repository, open <strong>Settings → Secrets and variables → Actions</strong>.</li>
+      <li>Add a secret named <code>CALENDAR_FEEDS</code>. Put one calendar per line, as <code>Name | link</code>. For example <code>Canvas | https://…/feeds/calendars/user_abc.ics</code>.</li>
+      <li>Add a secret named <code>PLANNER_PASSPHRASE</code> with a passphrase of at least 12 characters. You type it here once to unlock your schedule.</li>
+      <li>Open the <strong>Actions</strong> tab and run <strong>Sync calendars and publish</strong>. After that it refreshes every hour on its own.</li>
+    </ol>
+    <p class="note">Why this way: Canvas, Microsoft and Google do not let a web page read these links directly, so your repository fetches them for you and publishes an encrypted copy that only your passphrase opens. Treat the links like passwords.</p>
+
+    <h4>Or import a calendar file once</h4>
+    <label>Calendar file (.ics)
+      <input type="file" id="icsFile" accept=".ics,text/calendar" multiple>
+    </label>
+    <label>Or paste the file's text
+      <textarea id="icsText" rows="2" placeholder="BEGIN:VCALENDAR ..."></textarea>
+    </label>
+    <div class="result" id="impResult" hidden></div>
+    <div class="foot">
+      <button class="btn quiet" id="impClose">Close</button>
+      <button class="btn primary" id="impGo">Import file</button>
+    </div>
+  </div>
+</dialog>
+
+<dialog id="dlgAI" aria-labelledby="aiTitle">
+  <form class="dlg" id="aiForm">
+    <h3 id="aiTitle">Assistant settings</h3>
+    <label>Provider
+      <select id="pvProvider">
+        <option value="ollama">Ollama on this computer (free, no key)</option>
+        <option value="ollama-cloud">Ollama Cloud key (free, through your relay)</option>
+        <option value="anthropic">Claude (Anthropic API key)</option>
+      </select>
+    </label>
+    <div class="pv-group" id="pvLocal">
+      <label>Ollama address <input type="text" id="pvHost" placeholder="http://localhost:11434" autocomplete="off"></label>
+      <p class="note">Install Ollama, run <code>ollama pull llama3.2</code>, and allow this site once (see <a href="https://github.com/gurmehar-chima/study-desk/blob/main/STUDY-PLAN-AND-OLLAMA.md" target="_blank" rel="noopener">the setup guide</a>). Works only on the computer running Ollama.</p>
+    </div>
+    <div class="pv-group" id="pvCloud" hidden>
+      <label>Relay address <input type="text" id="pvProxy" placeholder="https://study-desk-ollama.YOUR-NAME.workers.dev" autocomplete="off"></label>
+      <label>Access code <input type="password" id="pvCode" autocomplete="off"></label>
+      <p class="note">Ollama Cloud does not accept requests straight from web pages, so your key lives in a small free relay you set up once. Your Ollama key never goes in this page. Steps are in <a href="https://github.com/gurmehar-chima/study-desk/blob/main/STUDY-PLAN-AND-OLLAMA.md" target="_blank" rel="noopener">the setup guide</a>.</p>
+    </div>
+    <div class="pv-group" id="pvAnth" hidden>
+      <label>Anthropic API key <input type="password" id="pvKey" placeholder="sk-ant-..." autocomplete="off"></label>
+      <p class="note">Create a key at <a href="https://platform.claude.com/settings/keys" target="_blank" rel="noopener">platform.claude.com/settings/keys</a>. Each question is billed to that account.</p>
+    </div>
+    <label>Model
+      <input type="text" id="pvModel" list="pvModels" autocomplete="off" style="border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:7px 9px;font-weight:400">
+      <datalist id="pvModels"></datalist>
+    </label>
+    <div class="row-btns"><button class="btn" type="button" id="pvTest">Test connection</button></div>
+    <div class="result" id="pvResult" hidden></div>
+    <input type="hidden" id="aiKey"><input type="hidden" id="aiModel">
+    <p class="note">Settings are stored only in this browser. Do not save a key on a shared computer.</p>
+    <div class="foot">
+      <button class="btn danger quiet" type="button" id="aiRemove">Disconnect</button>
+      <span class="sp"></span>
+      <button class="btn quiet" type="button" id="aiCancel">Cancel</button>
+      <button class="btn primary" type="submit">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="dlgItem" aria-labelledby="itTitle">
+  <form class="dlg" id="itemForm">
+    <h3 id="itTitle">Add item</h3>
+    <div class="two">
+      <label>Type
+        <select id="fKind"><option value="due">Assignment or deadline</option><option value="event">Event</option><option value="class">Class (repeats weekly)</option></select>
+      </label>
+      <label>Course
+        <input type="text" id="fCourse" placeholder="BIOL 1710" list="courseList"><datalist id="courseList"></datalist>
+      </label>
+    </div>
+    <label>Title
+      <input type="text" id="fTitle" required placeholder="Lab report">
+    </label>
+    <div class="two" id="oneOff">
+      <label>Date <input type="date" id="fDate"></label>
+      <label><span id="fTimeLbl">Due time</span> <input type="time" id="fTime"></label>
+    </div>
+    <div id="classFields" hidden>
+      <div class="days" id="fDays"></div>
+    </div>
+    <div class="two" id="rangeFields" hidden>
+      <label>Starts <input type="time" id="fStart"></label>
+      <label>Ends <input type="time" id="fEnd"></label>
+      <label>First day of term <input type="date" id="fFrom"></label>
+      <label>Last day of term <input type="date" id="fUntil"></label>
+    </div>
+    <label id="whereWrap" hidden>Location <input type="text" id="fWhere" placeholder="Science Hall 104"></label>
+    <div class="result bad" id="itErr" hidden></div>
+    <div class="foot">
+      <button class="btn danger quiet" type="button" id="itDelete" hidden>Delete</button>
+      <span class="sp"></span>
+      <button class="btn quiet" type="button" id="itCancel">Cancel</button>
+      <button class="btn primary" type="submit">Save</button>
+    </div>
+  </form>
+</dialog>
+<script src="ai-providers.js"></script>
+<script src="app.js"></script>
+<script src="study-plan.js"></script>
+</body>
+</html>

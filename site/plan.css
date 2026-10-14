@@ -1,0 +1,64 @@
+/* Study Desk: styles for the study plan section and assistant setup on plan.html.
+ * Builds on the tokens defined in styles.css. */
+.top .jump{text-decoration:none;color:inherit;display:inline-flex;align-items:center}
+
+.planp{display:flex;flex-direction:column}
+.planp .ph p{margin:4px 0 0;color:var(--muted);font-size:13.5px;max-width:70ch}
+.sp-body{padding:0 16px 16px;display:flex;flex-direction:column;gap:16px}
+.sp-head{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:space-between}
+.sp-note{background:var(--mark);color:var(--mark-ink);border-radius:6px;padding:6px 10px;font-size:13px}
+
+.sp-classes{display:flex;flex-direction:column}
+.sp-row{display:grid;grid-template-columns:4px minmax(0,1fr) auto auto minmax(140px,180px);gap:8px 14px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.sp-row:first-child{border-top:0}
+.sp-row .swatch{min-height:36px;background:var(--cc)}
+.sp-name{display:flex;flex-direction:column;min-width:0}
+.sp-name strong{font-weight:600;color:var(--cc)}
+.sp-name span{font-size:12.5px;color:var(--muted);overflow-wrap:anywhere}
+.sp-field{display:flex;flex-direction:column;gap:2px;font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sp-field select,.sp-field input{font:400 14px var(--body);letter-spacing:0;text-transform:none;color:var(--ink);border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:5px 8px;min-width:0}
+.sp-field input{width:84px}
+.sp-meter{position:relative;height:26px;border-radius:6px;background:var(--sunk);overflow:hidden}
+.sp-meter i{position:absolute;inset:0 auto 0 0;background:var(--cc);opacity:.28}
+.sp-meter span{position:relative;display:block;padding:4px 8px;font:500 12px var(--mono);font-variant-numeric:tabular-nums}
+.sp-meter .late,.planp .late{color:var(--late);font-weight:500}
+@media (max-width:760px){
+  .sp-row{grid-template-columns:4px minmax(0,1fr) auto;}
+  .sp-row .sp-meter{grid-column:2 / -1}
+  .sp-row .sp-field:nth-of-type(2){grid-column:3}
+}
+@media (max-width:460px){ .sp-row{grid-template-columns:4px minmax(0,1fr)} .sp-row .sp-field,.sp-row .sp-meter{grid-column:2} }
+
+.sp-settings{display:flex;flex-wrap:wrap;gap:10px 18px;align-items:flex-end;padding:10px 12px;background:var(--sunk);border-radius:8px}
+.sp-settings label{display:flex;flex-direction:column;gap:2px;font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.sp-settings input,.sp-settings select{font:400 14px var(--body);letter-spacing:0;text-transform:none;color:var(--ink);border:1px solid var(--line);background:var(--surface);border-radius:6px;padding:5px 8px}
+.sp-settings input[type=number]{width:70px}
+.sp-settings label.inline{flex-direction:row;align-items:center;gap:6px;padding-bottom:6px}
+.sp-settings input[type=checkbox]{width:16px;height:16px;accent-color:var(--accent)}
+
+.sp-filter{display:flex;flex-wrap:wrap;gap:6px}
+.sp-filter:empty{display:none}
+.sp-filter button{border:1px solid var(--line);background:var(--surface);border-radius:999px;padding:4px 11px;font-size:13px}
+.sp-filter button[aria-pressed=true]{border-color:var(--cc,var(--accent));box-shadow:inset 0 0 0 1px var(--cc,var(--accent));font-weight:600}
+
+.sp-week{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;overflow-x:auto}
+@media (max-width:1100px){ .sp-week{grid-template-columns:repeat(4,minmax(0,1fr))} }
+@media (max-width:760px){ .sp-week{grid-template-columns:repeat(2,minmax(0,1fr))} }
+@media (max-width:460px){ .sp-week{grid-template-columns:minmax(0,1fr)} }
+.sp-day{display:flex;flex-direction:column;gap:6px;min-width:0}
+.sp-dh{display:flex;justify-content:space-between;align-items:baseline;font:500 11px var(--mono);letter-spacing:.06em;text-transform:uppercase;color:var(--muted);padding:0 2px 4px;border-bottom:1px solid var(--line)}
+.sp-dh b{font-weight:500;color:var(--ink)}
+.sp-day.today .sp-dh b{background:var(--mark);color:var(--mark-ink);padding:0 5px;border-radius:4px}
+.sp-block{display:grid;grid-template-columns:auto minmax(0,1fr);gap:1px 8px;padding:7px 8px;border-radius:6px;background:var(--sunk);border-left:3px solid var(--cc);cursor:pointer;font-size:13px}
+.sp-block input{grid-row:1 / span 3;margin:2px 0 0;width:16px;height:16px;accent-color:var(--accent)}
+.sp-bt{font:400 11.5px var(--mono);color:var(--muted);font-variant-numeric:tabular-nums}
+.sp-bc{font-weight:600;color:var(--cc);font-size:12px}
+.sp-bn{line-height:1.35;overflow-wrap:anywhere}
+.sp-block.done .sp-bn{text-decoration:line-through;color:var(--muted)}
+.sp-free{margin:0;color:var(--muted);font-size:13px;padding:6px 2px}
+.sp-how{margin:0;color:var(--muted);font-size:12.5px;max-width:90ch}
+
+/* assistant setup dialog */
+.pv-group{display:flex;flex-direction:column;gap:12px}
+.dlg .pv-group input{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:7px 9px;font-weight:400;min-width:0;width:100%}
+.dlg .row-btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
