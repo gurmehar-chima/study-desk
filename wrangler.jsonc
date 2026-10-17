@@ -1,0 +1,10 @@
+// Cloudflare Workers settings for the Ollama Cloud relay (relay/ollama-cloud-worker.js).
+// Cloudflare reads this file when it builds the "study-desk-ollama" Worker from this repository.
+// The website itself is published by GitHub Pages and is not affected.
+// Secrets (OLLAMA_API_KEY, ACCESS_CODE) are set in the Cloudflare dashboard, never here.
+{
+  "name": "study-desk-ollama",
+  "main": "relay/ollama-cloud-worker.js",
+  "compatibility_date": "2026-10-12",
+  "workers_dev": true
+}
