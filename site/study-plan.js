@@ -16,7 +16,7 @@ const fmt = m => { const h = Math.floor(m / 60), mm = m % 60; return (h % 12 || 
 const DOW = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 const MON = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
 const KEY = "study-desk-v1", PKEY = "study-desk-plan-v1";
-const LEVELS = [null, { name: "Light", per: 1.5, none: 2 }, { name: "Standard", per: 2, none: 4 }, { name: "Heavy", per: 2.5, none: 6 }];
+const LEVELS = [{ name: "Not a class", per: 0, none: 0 }, { name: "Light", per: 1.5, none: 2 }, { name: "Standard", per: 2, none: 4 }, { name: "Heavy", per: 2.5, none: 6 }];
 
 /* ---------- settings ---------- */
 let P = { winStart: "09:00", winEnd: "22:00", maxPerDay: 5, block: 50, weekends: true, courses: {}, done: {}, filter: "" };
@@ -80,10 +80,12 @@ function build() {
     (c.days || []).forEach(x => co.meetDays.add(x));
   }
   const horizonEnd = ymd(addDays(today, H + 7));
+  const termLo = ymd(addDays(today, -60)), termHi = ymd(addDays(today, 120));
   for (const i of d.items || []) {
-    if (i.kind !== "due" || i.done || !i.course) continue;
-    if (i.date < ymd(today) || i.date > horizonEnd) continue;
-    add(i.course).deadlines.push(i);
+    if (!i.course || i.date < termLo || i.date > termHi) continue;
+    const co = add(i.course);   // every class seen this term gets a plan, even with nothing due this week
+    if (i.kind !== "due" || i.done || i.date < ymd(today) || i.date > horizonEnd) continue;
+    co.deadlines.push(i);
   }
 
   // free time per day
@@ -109,10 +111,12 @@ function build() {
   // tasks
   const tasks = [];
   for (const co of courses.values()) {
-    const pc = P.courses[co.name] || {}, lvl = LEVELS[pc.level || 2];
+    const pc = P.courses[co.name] || {}, level = pc.level == null ? 2 : pc.level, lvl = LEVELS[level];
+    co.level = level;
+    if (level === 0) { co.target = 0; co.auto = 0; co.needMin = 0; continue; }
     const auto = co.meetMin ? Math.round(co.meetMin / 60 * lvl.per * 2) / 2 : lvl.none;
     co.target = Math.max(0.5, Math.min(20, Number(pc.hours) || auto));
-    co.auto = auto; co.level = pc.level || 2;
+    co.auto = auto;
     let prepMin = 0;
     for (const i of co.deadlines) {
       const p = prepFor(i.title), due = fromYmd(i.date);
@@ -202,7 +206,7 @@ function render() {
   if (P.filter && !plan.courses.some(c => c.name === P.filter)) P.filter = "";
 
   $("#spSummary").innerHTML = plan.courses.length
-    ? '<span class="pill">' + hrs(totalPlanned) + " planned</span><span class=\"pill\">" + plan.courses.length + " classes</span>" + (totalShort ? '<span class="pill late">' + hrs(totalShort) + " did not fit</span>" : "")
+    ? '<span class="pill">' + hrs(totalPlanned) + " planned</span><span class=\"pill\">" + plan.courses.filter(c => c.level !== 0).length + " classes</span>" + (totalShort ? '<span class="pill late">' + hrs(totalShort) + " did not fit</span>" : "")
     : "";
   $("#spExample").hidden = !plan.example;
 
@@ -213,15 +217,16 @@ function render() {
       '<div class="sp-name"><strong>' + esc(c.name) + "</strong><span>" + (c.meetMin ? hrs(c.meetMin) + " of class a week" : "no class times entered") +
         (c.next ? " · next due: " + esc(c.next.title) + ", " + relDay(c.next.date, fromYmd(ymd(new Date()))) : "") + "</span></div>" +
       '<label class="sp-field">Workload<select id="spLevel' + idx + '" data-course="' + esc(c.name) + '" data-f="level">' +
-        [1, 2, 3].map(v => '<option value="' + v + '"' + (c.level === v ? " selected" : "") + ">" + LEVELS[v].name + "</option>").join("") + "</select></label>" +
-      '<label class="sp-field">Hours a week<input id="spHours' + idx + '" type="number" min="0.5" max="20" step="0.5" value="' + c.target + '" data-course="' + esc(c.name) + '" data-f="hours" title="Suggested: ' + c.auto + ' h"></label>' +
-      '<div class="sp-meter" title="' + hrs(c.plannedMin) + " of " + hrs(c.needMin) + ' scheduled"><i style="width:' + Math.min(100, c.needMin ? c.plannedMin / c.needMin * 100 : 100) + '%"></i><span>' + hrs(c.plannedMin) + (c.unplacedMin ? ' <b class="late">· ' + hrs(c.unplacedMin) + " short</b>" : "") + "</span></div>" +
+        [1, 2, 3, 0].map(v => '<option value="' + v + '"' + (c.level === v ? " selected" : "") + ">" + LEVELS[v].name + "</option>").join("") + "</select></label>" +
+      '<label class="sp-field">Hours a week<input id="spHours' + idx + '" type="number" min="0.5" max="20" step="0.5" value="' + (c.level === 0 ? "" : c.target) + '"' + (c.level === 0 ? " disabled" : "") + ' data-course="' + esc(c.name) + '" data-f="hours" title="Suggested: ' + c.auto + ' h"></label>' +
+      (c.level === 0 ? '<div class="sp-meter"><span>Not planned</span></div>'
+        : '<div class="sp-meter" title="' + hrs(c.plannedMin) + " of " + hrs(c.needMin) + ' scheduled"><i style="width:' + Math.min(100, c.needMin ? c.plannedMin / c.needMin * 100 : 100) + '%"></i><span>' + hrs(c.plannedMin) + (c.unplacedMin ? ' <b class="late">· ' + hrs(c.unplacedMin) + " short</b>" : "") + "</span></div>") +
     "</div>").join("")
     : '<p class="empty">No classes yet. Connect your calendars or add a class on the planner above, and a plan appears here.</p>';
 
   // class filter
   $("#spFilter").innerHTML = plan.courses.length > 1 ? ['<button data-filter="" aria-pressed="' + !P.filter + '">All classes</button>']
-    .concat(plan.courses.map(c => '<button data-filter="' + esc(c.name) + '" aria-pressed="' + (P.filter === c.name) + '" style="--cc:' + colorOf(c.name) + '">' + esc(c.name) + "</button>")).join("") : "";
+    .concat(plan.courses.filter(c => c.level !== 0).map(c => '<button data-filter="' + esc(c.name) + '" aria-pressed="' + (P.filter === c.name) + '" style="--cc:' + colorOf(c.name) + '">' + esc(c.name) + "</button>")).join("") : "";
 
   // week
   const todayK = ymd(new Date());
@@ -269,7 +274,7 @@ function bind() {
 function planText() {
   const p = last || build(), lines = [];
   lines.push("Study window " + fmt(toMin(P.winStart)) + " to " + fmt(toMin(P.winEnd)) + ", at most " + P.maxPerDay + " h a day, " + p.L + "-minute sessions.");
-  for (const c of p.courses) lines.push("- " + c.name + ": target " + c.target + " h, planned " + hrs(c.plannedMin) + (c.unplacedMin ? ", " + hrs(c.unplacedMin) + " did not fit" : ""));
+  for (const c of p.courses) if (c.level !== 0) lines.push("- " + c.name + ": target " + c.target + " h, planned " + hrs(c.plannedMin) + (c.unplacedMin ? ", " + hrs(c.unplacedMin) + " did not fit" : ""));
   lines.push("Sessions:");
   for (const d of p.days) for (const b of d.blocks) lines.push("- " + DOW[d.date.getDay()] + " " + fmt(b.start) + " " + b.course + ": " + b.title);
   return lines.join("\n");

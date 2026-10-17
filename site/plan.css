@@ -62,3 +62,7 @@
 .pv-group{display:flex;flex-direction:column;gap:12px}
 .dlg .pv-group input{border:1px solid var(--line);background:var(--bg);border-radius:6px;padding:7px 9px;font-weight:400;min-width:0;width:100%}
 .dlg .row-btns{display:flex;gap:8px;flex-wrap:wrap;align-items:center}
+
+/* overdue list header with "Mark all done" */
+.sec-h{display:flex;align-items:baseline;justify-content:space-between;gap:8px}
+.mark-all{font:500 12px var(--body);color:var(--accent)}
