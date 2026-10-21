@@ -7,6 +7,6 @@
   "compatibility_date": "2026-10-12",
   "workers_dev": true,
   "d1_databases": [
-    { "binding": "DB", "database_name": "study-desk-social", "database_id": "REPLACE_WITH_DATABASE_ID" }
+    { "binding": "DB", "database_name": "study-desk-social", "database_id": "a2397d30-5c96-4cfa-af0a-e767cd67cac0" }
   ]
 }
