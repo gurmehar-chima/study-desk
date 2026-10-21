@@ -33,3 +33,14 @@ The backend is a Cloudflare Worker named `study-desk-social` with a D1 database 
 - Only the busy start and end times are uploaded. You can see exactly what's shared: the same blocks friends see in the grid.
 - **Delete my account** (at the bottom of the Friends section) removes your account, friendships, busy times and invites from the server. Your planner on your device is not affected.
 - There is no email on accounts, so a forgotten password can't be reset. Create a new account instead.
+
+## The assistant can send requests and invites
+
+On the social page, the assistant can prepare friend requests, accept waiting requests, and create meeting invites when you ask, for example "invite Sam and Lee to study calc Thursday when we're all free" or "send a friend request to sam_k".
+
+- Each action appears as a card under the assistant's reply. Nothing is sent until you click **Send**; **Skip** drops it.
+- For invites, the card checks everyone's shared busy times and warns if someone is busy then, or if a friend doesn't share their calendar.
+- The assistant only sees busy times (no details), your friends' names and usernames, waiting requests, and upcoming meetings.
+- The **Invite a friend** and **Add a friend** buttons start a message for you to finish.
+
+Files: `site/ai-actions.js` and `site/ai-actions.css`, loaded only by `social.html`.
