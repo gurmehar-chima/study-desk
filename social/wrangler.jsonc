@@ -1,0 +1,12 @@
+// Cloudflare Workers settings for the Study Desk friends backend (social/worker.js).
+// Cloudflare builds this Worker from the "social" folder of this repository.
+// The website itself is published by GitHub Pages and is not affected.
+{
+  "name": "study-desk-social",
+  "main": "worker.js",
+  "compatibility_date": "2026-10-12",
+  "workers_dev": true,
+  "d1_databases": [
+    { "binding": "DB", "database_name": "study-desk-social", "database_id": "REPLACE_WITH_DATABASE_ID" }
+  ]
+}
