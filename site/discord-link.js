@@ -1,7 +1,8 @@
 /* Study Desk: "Connect Discord" on social.html.
  * Links your Study Desk account to the Study Desk Discord app, and while linked, keeps a private
  * copy of your classes and upcoming deadlines on the Study Desk server so the Discord assistant
- * can answer. Disconnecting deletes that copy. Loaded after social.js. */
+ * can answer. Disconnecting deletes that copy. Events and tasks you ask the Discord bot to add are
+ * collected here and added to your planner calendar. Loaded after social.js. */
 (function () {
 "use strict";
 const API = (function () { try { return localStorage.getItem("study-desk-social-api"); } catch (e) { return null; } })() || "https://study-desk-social.gc756325.workers.dev";
@@ -44,6 +45,38 @@ async function upload(force) {
   catch (e) { note(e.message, true); }
 }
 
+/* ---------- events and tasks the Discord bot added ---------- */
+const icsEsc = v => String(v || "").replace(/\\/g, "\\\\").replace(/[,;]/g, "\\$&").replace(/\r?\n/g, "\\n");
+const icsTime = ms => { const d = new Date(ms); return d.getFullYear() + pad(d.getMonth() + 1) + pad(d.getDate()) + "T" + pad(d.getHours()) + pad(d.getMinutes()) + "00"; };
+let pulling = false;
+async function pullInbox() {
+  if (pulling || !status || !status.linked) return;
+  const txt = $("#icsText"), go = $("#impGo");
+  if (!txt || !go) return;
+  pulling = true;
+  try {
+    const r = await api("GET", "/api/planner/inbox");
+    if (!r.items || !r.items.length) return;
+    const L = ["BEGIN:VCALENDAR", "PRODID:-//Study Desk//Discord//EN"];
+    for (const x of r.items) {
+      L.push("BEGIN:VEVENT", "UID:discord-" + x.id, "DTSTART:" + icsTime(x.start));
+      if (x.kind === "event" && x.end) L.push("DTEND:" + icsTime(x.end));
+      L.push("SUMMARY:" + icsEsc(x.title + (x.course ? " [" + x.course + "]" : "")), "END:VEVENT");
+    }
+    L.push("END:VCALENDAR");
+    // Use the planner's own import so the items are saved and shown like any other calendar entry.
+    txt.value = L.join("\r\n"); go.click();
+    await new Promise(res => setTimeout(res, 400));
+    let saved = []; try { saved = (JSON.parse(localStorage.getItem(KEY) || "{}").items || []).map(i => i.uid); } catch (e) {}
+    const done = r.items.filter(x => saved.some(u => String(u || "").endsWith("discord-" + x.id)));
+    if (done.length) {
+      await api("POST", "/api/planner/inbox/ack", { ids: done.map(x => x.id) });
+      note("Added from Discord: " + done.map(x => x.title).join(", ") + ".");
+    }
+  } catch (e) { /* try again next time */ }
+  finally { pulling = false; }
+}
+
 /* ---------- panel ---------- */
 function ensurePanel() {
   if ($("#dcPanel")) return $("#dcPanel");
@@ -66,7 +99,7 @@ function render() {
   if (!status.available) {
     h += '<p class="so-hint">The Discord app isn\'t set up on this Study Desk server yet.</p>';
   } else if (status.linked) {
-    h += "<p>Connected as <strong>" + esc(status.discordName) + "</strong>. In Discord, type <code>/today</code> or <code>/ask</code> in a DM with the Study Desk app, or in any chat. Replies are only visible to you.</p>" +
+    h += "<p>Connected as <strong>" + esc(status.discordName) + "</strong>. In Discord, type <code>/today</code> or <code>/ask</code> in any chat. Replies are only visible to you. Events and tasks you ask the bot to add show up on your calendar here.</p>" +
       '<p class="so-hint">Schedule copy updated ' + ago(status.scheduleUpdatedAt) + ". It updates when you open this page or change your planner.</p>" +
       '<div class="row-btns"><button class="btn small" type="button" data-dc="sync">Update now</button><a class="btn small" href="' + esc(status.installUrl) + '" target="_blank" rel="noopener">Add the app again</a><button class="linkish so-rm" type="button" data-dc="unlink">Disconnect</button></div>';
   } else if (code) {
@@ -100,14 +133,14 @@ function startPoll() {
   stopPoll(); const until = Date.now() + 10 * 60000;
   poll = setInterval(async () => {
     if (Date.now() > until) { stopPoll(); code = null; render(); note("The code expired. Click Connect Discord to get a new one.", true); return; }
-    try { const s = await api("GET", "/api/discord/status"); if (s.linked) { status = s; code = null; stopPoll(); await upload(true); render(); note("Connected! Try /today in Discord."); } } catch (x) {}
+    try { const s = await api("GET", "/api/discord/status"); if (s.linked) { status = s; code = null; stopPoll(); await upload(true); render(); note("Connected! Try /today in Discord."); pullInbox(); } } catch (x) {}
   }, 4000);
 }
 function stopPoll() { if (poll) clearInterval(poll); poll = null; }
 
 async function refreshStatus() {
   if (!token()) { status = null; render(); return; }
-  try { status = await api("GET", "/api/discord/status"); render(); if (status.linked) upload(false); }
+  try { status = await api("GET", "/api/discord/status"); render(); if (status.linked) { await pullInbox(); upload(false); } }
   catch (e) { status = null; render(); }
 }
 
@@ -122,7 +155,9 @@ function watch() {
 const prevSet = Storage.prototype.setItem;
 Storage.prototype.setItem = function (k, v) { prevSet.apply(this, arguments); if (this === window.localStorage && k === KEY && status && status.linked) { clearTimeout(upTimer); upTimer = setTimeout(() => upload(false), 3000); } };
 setInterval(() => { if (status && status.linked && document.visibilityState === "visible") upload(false); }, 30 * 60000);
+setInterval(() => { if (document.visibilityState === "visible") pullInbox(); }, 60000);
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") pullInbox(); });
 
 if (document.readyState === "loading") document.addEventListener("DOMContentLoaded", watch); else watch();
-window.__discordLink = { snapshot };
+window.__discordLink = { snapshot, pullInbox };
 })();

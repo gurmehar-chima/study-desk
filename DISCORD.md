@@ -14,7 +14,7 @@ Then use these commands in a DM with the app or in any chat. Replies are only vi
 | Command | What it does |
 | --- | --- |
 | `/today` | Today's classes, what's due, overdue work and meetings |
-| `/ask question` | The assistant: plans, priorities, explanations, quizzes. It can also prepare friend requests and meeting invites, which you confirm with **Send** |
+| `/ask question` | The assistant: plans, priorities, explanations, quizzes. It can also add events and tasks to your calendar, invite friends to meetings, and send or accept friend requests |
 | `/link code` | Connect your account |
 | `/unlink` | Disconnect and delete your schedule copy |
 | `/help` | List the commands |
@@ -44,3 +44,18 @@ Discord sends each command to `https://study-desk-social.gc756325.workers.dev/di
 6. Open `https://study-desk-social.gc756325.workers.dev/discord/register` once to register the commands.
 
 **Optional settings.** To use a different Workers AI model, set `AI_MODEL`. To use Ollama Cloud instead, add an `OLLAMA_API_KEY` secret and optionally `OLLAMA_MODEL`.
+
+## Asking the bot to do things
+
+Ask in plain words, for example:
+
+- `/ask schedule Alone study time tomorrow at 3pm for 2 hours`
+- `/ask add a task to read chapter 7 for MATH 2301 due Friday`
+- `/ask invite sam_k to study Thursday when we're both free`
+- `/ask send a friend request to lee` or `/ask accept Lee's request`
+
+The bot does it right away and confirms each change with a ✅ line and an **Undo** button. If something looks off, it asks first with **Do it anyway** and **Skip**: for example, when you or a friend is already busy then, or when it can't see a friend's calendar.
+
+Events and tasks for just you go to your own Study Desk calendar. Your planner lives in your browser, so they're added the next time you open the friends page (or within a minute if it's already open). Until then, `/today` and `/ask` already know about them. **Undo** works until they've been added. After that, click the item on the calendar and choose **Delete**.
+
+Meeting invites, friend requests and accepts go through at once; friends see invites in their Meetings list.
