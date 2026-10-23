@@ -8,8 +8,8 @@
   "workers_dev": true,
   "ai": { "binding": "AI" },
   "vars": {
-    "DISCORD_APPLICATION_ID": "",
-    "DISCORD_PUBLIC_KEY": ""
+    "DISCORD_APPLICATION_ID": "1562985366317834330",
+    "DISCORD_PUBLIC_KEY": "7ef9635dc9583366c900959f44039451dcbf50f45fc2bf372c2adfdff45ff10b"
   },
   "d1_databases": [
     { "binding": "DB", "database_name": "study-desk-social", "database_id": "a2397d30-5c96-4cfa-af0a-e767cd67cac0" }
