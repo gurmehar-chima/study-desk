@@ -7,6 +7,8 @@
 // Settings (Cloudflare dashboard → this Worker → Settings → Variables and Secrets):
 //   ALLOWED_ORIGIN (text, optional) defaults to https://gurmehar-chima.github.io
 
+import { DISCORD_SCHEMA, discordRoutes, handleDiscord } from "./discord.js";
+
 const DEFAULT_ORIGIN = "https://gurmehar-chima.github.io";
 const DAY = 86400000;
 const SESSION_DAYS = 60;
@@ -32,7 +34,7 @@ const SCHEMA = [
 
 let schemaReady = null;
 function ensureSchema(db) {
-  if (!schemaReady) schemaReady = db.batch(SCHEMA.map(s => db.prepare(s))).catch(e => { schemaReady = null; throw e; });
+  if (!schemaReady) schemaReady = db.batch(SCHEMA.concat(DISCORD_SCHEMA).map(s => db.prepare(s))).catch(e => { schemaReady = null; throw e; });
   return schemaReady;
 }
 
@@ -40,7 +42,7 @@ class HttpError extends Error { constructor(status, message) { super(message); t
 const fail = (status, message) => { throw new HttpError(status, message); };
 
 export default {
-  async fetch(request, env) {
+  async fetch(request, env, exec) {
     const allowed = env.ALLOWED_ORIGIN || DEFAULT_ORIGIN;
     const cors = {
       "Access-Control-Allow-Origin": allowed,
@@ -54,6 +56,11 @@ export default {
 
     const url = new URL(request.url);
     if (url.pathname === "/" || url.pathname === "/api/health") return json(200, { ok: true, service: "study-desk-social" });
+    if (url.pathname === "/discord" || url.pathname.startsWith("/discord/")) { // Discord signs these; no browser origin
+      if (!env.DB) return json(500, { error: "The database is not connected to this Worker." });
+      try { return await handleDiscord(request, env, exec, H); }
+      catch (e) { console.error(e && e.stack || e); return json(500, { error: "Something went wrong." }); }
+    }
     const origin = request.headers.get("Origin") || "";
     if (origin !== allowed) return json(403, { error: "This service only serves " + allowed });
     if (!env.DB) return json(500, { error: "The database is not connected to this Worker." });
@@ -69,7 +76,7 @@ export default {
         if (text) { try { body = JSON.parse(text); } catch (e) { fail(400, "Request was not valid JSON."); } }
         if (!body || typeof body !== "object" || Array.isArray(body)) fail(400, "Request was not a JSON object.");
       }
-      const ctx = { db: env.DB, body, request };
+      const ctx = { db: env.DB, body, request, env };
       if (!route.public) ctx.user = await authenticate(env.DB, request);
       return json(200, await route.run(ctx));
     } catch (e) {
@@ -300,3 +307,7 @@ const ROUTES = {
     return { ok: true };
   } },
 };
+
+/* ---------------- Discord (see discord.js) ---------------- */
+const H = { ensureSchema, randomId, fail, ROUTES, loadMe: (db, user) => ROUTES["GET /api/me"].run({ db, user }) };
+Object.assign(ROUTES, discordRoutes(H));

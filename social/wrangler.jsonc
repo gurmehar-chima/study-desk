@@ -6,6 +6,11 @@
   "main": "worker.js",
   "compatibility_date": "2026-10-12",
   "workers_dev": true,
+  "ai": { "binding": "AI" },
+  "vars": {
+    "DISCORD_APPLICATION_ID": "",
+    "DISCORD_PUBLIC_KEY": ""
+  },
   "d1_databases": [
     { "binding": "DB", "database_name": "study-desk-social", "database_id": "a2397d30-5c96-4cfa-af0a-e767cd67cac0" }
   ]

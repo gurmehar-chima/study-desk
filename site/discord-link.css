@@ -1,0 +1,12 @@
+/* Study Desk: Connect Discord panel on social.html. Uses tokens from styles.css. */
+.dc{border:1px solid var(--line);border-radius:10px;padding:14px 16px;display:flex;flex-direction:column;gap:10px;background:var(--bg)}
+.dc p{margin:0;font-size:14px;max-width:72ch}
+.dc-head{display:flex;align-items:center;gap:8px}
+.dc-head h3{margin:0}
+.dc-logo{width:22px;height:22px;color:#5865F2;flex:none}
+.dc code{font:400 12.5px var(--mono);background:var(--sunk);padding:1px 5px;border-radius:4px}
+.dc-steps{margin:0}
+.dc-code{display:flex;align-items:center;gap:10px;flex-wrap:wrap}
+.dc-code span:first-child{font:600 22px/1 var(--mono);letter-spacing:.18em;background:var(--mark);color:var(--mark-ink);padding:6px 10px;border-radius:6px}
+.dc .row-btns{display:flex;gap:10px;align-items:center;flex-wrap:wrap}
+.dc a.btn{text-decoration:none;color:inherit}
